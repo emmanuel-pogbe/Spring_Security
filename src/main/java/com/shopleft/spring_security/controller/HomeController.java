@@ -1,12 +1,27 @@
 package com.shopleft.spring_security.controller;
 
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
-@RestController
+@Controller
 public class HomeController {
     @GetMapping("/")
     public String home() {
-        return "Welcome to Spring Security";
+        return "home";
+    }
+
+    @GetMapping("admin")
+    public String admin() {
+        return "admin";
+    }
+
+    @GetMapping("/user")
+    public String user() {
+        return "user";
+    }
+
+    @GetMapping("/login")
+    public String login() {
+        return "login";
     }
 }
