@@ -1,7 +1,12 @@
 package com.shopleft.spring_security.config;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import com.shopleft.spring_security.config.jwt.AuthEntryPoint;
+import com.shopleft.spring_security.config.jwt.AuthTokenFilter;
+import com.shopleft.spring_security.repository.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.ldap.core.support.BaseLdapPathContextSource;
@@ -12,35 +17,50 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.ExceptionHandlingConfigurer;
 import org.springframework.security.config.annotation.web.configurers.LogoutConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.ldap.authentication.BindAuthenticator;
 import org.springframework.security.ldap.authentication.LdapAuthenticationProvider;
 import org.springframework.security.ldap.userdetails.DefaultLdapAuthoritiesPopulator;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
+    private final AuthEntryPoint authEntryPoint;
+
+    public SecurityConfiguration(AuthEntryPoint authEntryPoint) {
+        this.authEntryPoint = authEntryPoint;
+    }
 
 	@Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager, AuthTokenFilter authTokenFilter) throws Exception {
 		http
+                .csrf(csrf->csrf.disable())
             .authenticationManager(authenticationManager)
+                .exceptionHandling(exceptionHandling ->exceptionHandling.authenticationEntryPoint(authEntryPoint))
+                .sessionManagement(sessionManagement->
+                        sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/user").hasAnyRole("USER","ADMIN","DEVELOPERS")
+                    .requestMatchers("/api/v1/info").authenticated()
                     .anyRequest().permitAll()
 			)
 			.formLogin(Customizer.withDefaults())
 			.logout(LogoutConfigurer::permitAll);
-
-		return http.build();
+        http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
 	}
 
     @Bean
@@ -49,12 +69,17 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-        String password = encoder.encode("password");
-        String adminPassword = encoder.encode("admin");
-        UserDetails user = User.withUsername("user").password(password).roles("USER").build();
-        UserDetails user2 = User.withUsername("admin").password(adminPassword).roles("ADMIN").build();
-        return new InMemoryUserDetailsManager(user,user2);
+    public UserDetailsService userDetailsService(UserRepository userRepository) {
+        return username -> {
+            com.shopleft.spring_security.models.User appUser = userRepository.findByUsername(username);
+
+
+            if (appUser == null) {
+                throw new UsernameNotFoundException("User not found: " + username);
+            }
+
+            return new User(appUser.getUsername(), appUser.getPassword(), new ArrayList<>());
+        };
     }
 
     @Bean

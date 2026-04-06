@@ -1,9 +1,6 @@
 package com.shopleft.spring_security.models;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,10 +9,12 @@ import java.util.List;
 @Table(name = "user_table")
 public class User {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String username;
     private String password;
-    private boolean enabled;
+
+    public User() {}
 
     @OneToMany(mappedBy = "user")
     private List<Authorities> authorities = new ArrayList<>();
@@ -42,14 +41,6 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
     }
 
     public List<Authorities> getAuthorities() {
