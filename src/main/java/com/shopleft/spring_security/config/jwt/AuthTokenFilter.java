@@ -1,5 +1,6 @@
 package com.shopleft.spring_security.config.jwt;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,7 +20,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
     private final JwtUtils jwtUtils;
 
-    AuthTokenFilter(JwtUtils jwtUtils, UserDetailsService userDetailsService) {
+    AuthTokenFilter(JwtUtils jwtUtils, @Qualifier("ldapAwareUserDetailsService") UserDetailsService userDetailsService) {
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
     }

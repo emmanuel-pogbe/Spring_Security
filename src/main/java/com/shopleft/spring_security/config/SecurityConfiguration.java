@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import com.shopleft.spring_security.config.jwt.AuthEntryPoint;
 import com.shopleft.spring_security.config.jwt.AuthTokenFilter;
 import com.shopleft.spring_security.repository.UserRepository;
@@ -83,8 +84,25 @@ public class SecurityConfiguration {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository, LdapTemplate ldapTemplate) {
+    @Bean("dbUserDetailsService")
+    public UserDetailsService dbUserDetailsService(UserRepository userRepository) {
+        return username -> {
+            com.shopleft.spring_security.models.User appUser = userRepository.findByUsername(username);
+
+            if (appUser == null) {
+                throw new UsernameNotFoundException("User not found: " + username);
+            }
+
+            List<SimpleGrantedAuthority> authorities = appUser.getAuthorities().stream()
+                    .map(authority -> toRoleAuthority(authority.getAuthority()))
+                    .toList();
+
+            return new User(appUser.getUsername(), appUser.getPassword(), authorities);
+        };
+    }
+
+    @Bean("ldapAwareUserDetailsService")
+    public UserDetailsService ldapAwareUserDetailsService(UserRepository userRepository, LdapTemplate ldapTemplate) {
         return username -> {
             com.shopleft.spring_security.models.User appUser = userRepository.findByUsername(username);
 
@@ -130,7 +148,7 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public AuthenticationProvider daoAuthenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+    public AuthenticationProvider daoAuthenticationProvider(@Qualifier("dbUserDetailsService") UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
         return provider;
@@ -150,6 +168,6 @@ public class SecurityConfiguration {
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationProvider daoAuthenticationProvider, AuthenticationProvider ldapAuthenticationProvider) {
-        return new ProviderManager(List.of(daoAuthenticationProvider, ldapAuthenticationProvider));
+        return new ProviderManager(List.of(ldapAuthenticationProvider, daoAuthenticationProvider));
     }
 }
