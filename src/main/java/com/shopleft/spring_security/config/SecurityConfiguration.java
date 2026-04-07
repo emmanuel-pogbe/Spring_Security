@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import com.shopleft.spring_security.config.jwt.AuthEntryPoint;
 import com.shopleft.spring_security.config.jwt.AuthTokenFilter;
 import com.shopleft.spring_security.repository.UserRepository;
+import com.shopleft.spring_security.service.CustomOidcUserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -19,7 +20,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.LogoutConfigurer;
@@ -66,14 +66,24 @@ public class SecurityConfiguration {
 
     @Bean
     @Order(2)
-    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http, CustomOidcUserService customOidcUserService) throws Exception {
     http
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/admin/**").hasRole("ADMIN")
             .requestMatchers("/user").hasAnyRole("USER", "ADMIN", "DEVELOPERS")
+            .requestMatchers("/me").authenticated()
             .anyRequest().permitAll()
         )
-        .formLogin(Customizer.withDefaults())
+        // Keep form login for local account testing.
+        .formLogin(form -> form.loginPage("/login").permitAll())
+        // Enable Google login and persist/update OAuth users in DB.
+        .oauth2Login(oauth2 -> oauth2
+            .loginPage("/login")
+            .userInfoEndpoint(userInfo -> userInfo
+                .oidcUserService(customOidcUserService)
+            )
+            .defaultSuccessUrl("/user", true)
+        )
         .logout(LogoutConfigurer::permitAll);
 
     return http.build();

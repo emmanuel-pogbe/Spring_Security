@@ -10,4 +10,7 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, Long> {
     @EntityGraph(attributePaths = "authorities")
     public User findByUsername(String username);
+
+    @EntityGraph(attributePaths = "authorities")
+    public User findByOauth2ProviderAndOauth2Subject(String oauth2Provider, String oauth2Subject);
 }
