@@ -4,6 +4,9 @@ import com.shopleft.spring_security.config.jwt.JwtUtils;
 import com.shopleft.spring_security.dto.AuthenticationRequest;
 import com.shopleft.spring_security.dto.SignupBody;
 import com.shopleft.spring_security.service.UserService;
+
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -29,7 +32,7 @@ public class APIController {
     }
 
     @PostMapping("/passport/auth")
-    public String auth(@RequestBody AuthenticationRequest authenticationRequest) {
+    public ResponseEntity<Map<String,Object>> auth(@RequestBody AuthenticationRequest authenticationRequest) {
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         authenticationRequest.getUsername(),
@@ -37,7 +40,7 @@ public class APIController {
                 )
         );
         UserDetails userDetails = (UserDetails) auth.getPrincipal();
-        return jwtUtils.generateToken(userDetails.getUsername());
+        return ResponseEntity.ok(jwtUtils.generateToken(userDetails.getUsername()));
     }
 
     @PostMapping("/signup")

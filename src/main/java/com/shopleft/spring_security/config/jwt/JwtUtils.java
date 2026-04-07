@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class JwtUtils {
@@ -26,13 +28,20 @@ public class JwtUtils {
     }
 
     // generate web token
-    public String generateToken(String username) {
-        return Jwts.builder()
+    public Map<String, Object> generateToken(String username) {
+        Date issuedAt = new Date();
+        Date expiration = new Date(new Date().getTime()+jwtExpiration);
+        String accessToken = Jwts.builder()
                 .subject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(new Date().getTime()+jwtExpiration))
+                .setIssuedAt(issuedAt)
+                .setExpiration(expiration)
                 .signWith(SignatureAlgorithm.HS512, secretKey)
                 .compact();
+        Map<String, Object> result = new HashMap<>();
+        result.put("issuedAt",issuedAt);
+        result.put("expiration",expiration);
+        result.put("accessToken",accessToken);
+        return result;
     }
 
     public String getUsernameFromToken(String token) {
