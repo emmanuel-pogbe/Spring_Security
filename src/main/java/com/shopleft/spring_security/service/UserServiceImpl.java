@@ -25,7 +25,7 @@ public class UserServiceImpl implements UserService {
         toBeSaved.setUsername(signup.getUsername());
 
         toBeSaved.setPassword(passwordEncoder.encode(signup.getPassword()));
-        toBeSaved.setAuthorities(List.of(new Authorities("USER",toBeSaved)));
+        toBeSaved.addAuthority("ROLE_USER");
         
         Optional<User> doesExist = Optional.ofNullable(userRepository.findByUsername(signup.getUsername()));
         if (doesExist.isPresent()) {

@@ -16,7 +16,7 @@ public class User {
 
     public User() {}
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Authorities> authorities = new ArrayList<>();
 
     public Long getId() {
@@ -49,5 +49,12 @@ public class User {
 
     public void setAuthorities(List<Authorities> authorities) {
         this.authorities = authorities;
+    }
+
+    public void addAuthority(String authority) {
+        Authorities userAuthority = new Authorities();
+        userAuthority.setAuthority(authority);
+        userAuthority.setUser(this);
+        this.authorities.add(userAuthority);
     }
 }
